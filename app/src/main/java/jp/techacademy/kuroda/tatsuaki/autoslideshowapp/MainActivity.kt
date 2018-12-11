@@ -7,11 +7,19 @@ import android.os.Build
 import android.util.Log
 import android.provider.MediaStore
 import android.content.ContentUris
+import android.os.Handler
+import android.view.View
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private val PERMISSIONS_REQUEST_CODE = 100
+    var idArray = arrayListOf<Long>()
+    var idNumber:Int = 0
+    var playingF = false
+    private var mTimer: Timer? = null
+    private var mHandler = Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +39,73 @@ class MainActivity : AppCompatActivity() {
         } else {
             getContentsInfo()
         }
+        back_button.setOnClickListener(this)
+        next_button.setOnClickListener(this)
+        playstop_button.setOnClickListener(this)
     }
+    override fun onClick(v: View) {
+//        if(idArray.count()==0) {
+//            Snackbar.make(v, "画像がありません", Snackbar.LENGTH_INDEFINITE)
+//                .setAction("OK") {
+//                    Log.d("UI_PARTS", "Snackbarをタップした")
+//                }.show()
+//            return
+//        }
+       when(v.id){
+            R.id.back_button -> showBack()//textView.text = editText.text.toString()
+            R.id.playstop_button -> playStop()
+            R.id.next_button -> showNext()
+        }
+    }
+    fun showBack(){
+        idNumber -= 1
+        if (idNumber<0){
+            idNumber=idArray.count()-1
+        }
+        val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, idArray[idNumber])
+        imageView.setImageURI(imageUri)
+
+    }
+    fun playStop(){
+        if(playingF){
+            playingF=false
+            if (mTimer != null){
+                mTimer!!.cancel()
+                mTimer = null
+            }
+
+            playstop_button.text="再生"
+            back_button.setEnabled(true);
+            next_button.setEnabled(true);
+
+        }else{
+            playingF=true
+            playstop_button.text="停止"
+
+            back_button.setEnabled(false);
+            next_button.setEnabled(false);
+
+            mTimer = Timer()
+            mTimer!!.schedule(object : TimerTask() {
+                override fun run() {
+                    mHandler.post {
+                        showNext()
+                    }
+                }
+            }, 2000, 2000)
+
+        }
+    }
+    fun showNext() {
+        idNumber += 1
+        if (idNumber == idArray.count()) {
+            idNumber = 0
+        }
+        val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, idArray[idNumber])
+        imageView.setImageURI(imageUri)
+
+    }
+
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
@@ -43,6 +117,9 @@ class MainActivity : AppCompatActivity() {
     }
     private fun getContentsInfo() {
         // 画像の情報を取得する
+        if (idArray.isEmpty() == false) {
+            idArray.clear()
+        }
         val resolver = contentResolver
         val cursor = resolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI, // データの種類
@@ -51,15 +128,21 @@ class MainActivity : AppCompatActivity() {
             null, // フィルタ用パラメータ
             null // ソート (null ソートなし)
         )
-
         if (cursor.moveToFirst()) {
-            // indexからIDを取得し、そのIDから画像のURIを取得する
-            val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-            val id = cursor.getLong(fieldIndex)
-            val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-
+            do {
+                // indexからIDを取得し、そのIDから画像のURIを取得する
+                val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+                val id = cursor.getLong(fieldIndex)
+                val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                idArray.add(id)
+                Log.d("ANDROID", "URI : " + imageUri.toString())
+            } while (cursor.moveToNext())
+        }
+        Log.d("URI**",idArray.count().toString())
+        cursor.close()
+        if (idArray.isEmpty() == false) {
+            val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, idArray[0])
             imageView.setImageURI(imageUri)
         }
-        cursor.close()
     }
 }
