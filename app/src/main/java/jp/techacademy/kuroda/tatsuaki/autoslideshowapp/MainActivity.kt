@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private val PERMISSIONS_REQUEST_CODE = 100
     var idArray = arrayListOf<Long>()
     var idNumber:Int = 0
-    var playingF = false
+    var playingF  = false
     private var mTimer: Timer? = null
     private var mHandler = Handler()
 
@@ -51,6 +51,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 //                }.show()
 //            return
 //        }
+        if(idArray.count()==0){
+            return
+        }
        when(v.id){
             R.id.back_button -> showBack()//textView.text = editText.text.toString()
             R.id.playstop_button -> playStop()
